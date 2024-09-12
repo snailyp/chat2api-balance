@@ -1,3 +1,6 @@
 Flask
+httpx
 python-dotenv
 Requests
+starlette
+uvicorn
