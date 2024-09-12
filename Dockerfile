@@ -10,12 +10,8 @@ COPY . /app
 # 安装项目依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 设置环境变量
-ENV FLASK_APP=main.py
-ENV FLASK_RUN_HOST=0.0.0.0
-
 # 暴露端口5000供外部访问
 EXPOSE 5000
 
 # 运行应用
-CMD ["flask", "run"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
