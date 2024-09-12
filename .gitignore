@@ -161,3 +161,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 tests/
+success_claude_url
+supported_models_and_chat_status.txt
+clawurls.txt
