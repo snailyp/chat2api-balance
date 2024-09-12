@@ -5,6 +5,7 @@ import requests
 import logging
 import os
 from dotenv import load_dotenv
+import urllib.parse
 
 # 加载.env文件
 load_dotenv()
@@ -84,7 +85,11 @@ def proxy(path):
             if response.status_code != 200:
                 logging.warning(f"响应状态码: {response.status_code}")
                 logging.warning(f"响应内容: {response.text}")
-                requests.get(f"{BARK_URL}chat2api-balance/响应状态码:{response.status_code}\n响应内容:{response.text}\n请求方法: {request.method}\n目标URL: {target_url}\nrandom_key: {random_key}",timeout=5)
+                
+                message = f"响应状态码: {response.status_code}\n响应内容: {response.text}\n请求方法: {request.method}\n目标URL: {random_url[7:]}\nrandom_key: {random_key}"
+                encoded_message = urllib.parse.quote(message)
+                request_url = f"{BARK_URL}chat2api-balance/{encoded_message}"
+                requests.get(request_url, timeout=5, proxies={"https": "http://127.0.0.1:7892"})
             return Response(stream_with_context(generate()), content_type='text/event-stream')
         else:
             # 非流式请求
