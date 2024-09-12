@@ -84,7 +84,7 @@ def proxy(path):
             if response.status_code != 200:
                 logging.warning(f"响应状态码: {response.status_code}")
                 logging.warning(f"响应内容: {response.text}")
-                requests.get(f"{BARK_URL}/chat2api-balance/响应状态码:{response.status_code}\n响应内容:{response.text}\n请求方法: {request.method}\n目标URL: {target_url}\nrandom_key: {random_key}",timeout=5)
+                requests.get(f"{BARK_URL}chat2api-balance/响应状态码:{response.status_code}\n响应内容:{response.text}\n请求方法: {request.method}\n目标URL: {target_url}\nrandom_key: {random_key}",timeout=5)
             return Response(stream_with_context(generate()), content_type='text/event-stream')
         else:
             # 非流式请求
