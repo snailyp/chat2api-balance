@@ -17,6 +17,7 @@ API_KEYS = os.getenv('API_KEYS', '').split(',')
 API_URLS = os.getenv('API_URLS', '').split(',')
 
 SECRET_TOKEN = os.getenv('SECRET_TOKEN')
+BARK_URL = os.getenv('BARK_URL')
 ALLOWED_PATHS = ["/v1/completions", "/v1/chat/completions", "/v1/models"]
 
 app = Flask(__name__)
@@ -62,6 +63,7 @@ def proxy(path):
     # 打印必要的URL
     logging.info(f"请求方法: {request.method}")
     logging.info(f"目标URL: {target_url}")
+    logging.info(f"random_key: {random_key}")
 
     # 发送请求到目标API
     if request.method == "POST":
@@ -79,7 +81,10 @@ def proxy(path):
                 for chunk in response.iter_lines():
                     if chunk:
                         yield f"{chunk.decode('utf-8')}\n\n"
-            
+            if response.status_code != 200:
+                logging.warning(f"响应状态码: {response.status_code}")
+                logging.warning(f"响应内容: {response.text}")
+                requests.get(f"{BARK_URL}/chat2api-balance/响应状态码:{response.status_code}\n响应内容:{response.text}\n请求方法: {request.method}\n目标URL: {target_url}\nrandom_key: {random_key}",timeout=5)
             return Response(stream_with_context(generate()), content_type='text/event-stream')
         else:
             # 非流式请求
