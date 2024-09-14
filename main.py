@@ -17,15 +17,26 @@ import asyncio
 # 加载.env文件
 load_dotenv()
 
-# 设置日志级别
-logging.basicConfig(level=logging.INFO)
+# 设置日志格式和级别
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-# 从.env文件中获取API_KEYS和API_URLS
-API_KEYS = os.getenv("API_KEYS", "").split(",")
-API_URLS = os.getenv("API_URLS", "").split(",")
-CLAUDE_API_URLS = os.getenv("CLAUDE_API_URLS", "").split(",")
+# 从.env文件中获取API_KEYS和API_URLS，并进行验证
+API_KEYS = os.getenv("API_KEYS", "")
+API_URLS = os.getenv("API_URLS", "")
+CLAUDE_API_URLS = os.getenv("CLAUDE_API_URLS", "")
 SECRET_TOKEN = os.getenv("SECRET_TOKEN")
 BARK_URL = os.getenv("BARK_URL")
+
+if not all([API_KEYS, API_URLS, CLAUDE_API_URLS, SECRET_TOKEN, BARK_URL]):
+    logging.error("必要的环境变量未设置")
+    raise ValueError("Missing required environment variables.")
+
+API_KEYS = API_KEYS.split(",")
+API_URLS = API_URLS.split(",")
+CLAUDE_API_URLS = CLAUDE_API_URLS.split(",")
 ALLOWED_PATHS = {"/v1/completions", "/v1/chat/completions", "/v1/models"}
 
 
@@ -44,9 +55,11 @@ def get_models_data() -> Dict[str, List[Dict[str, str]]]:
 
 
 def add_cors_headers(response: Response) -> Response:
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers.update({
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Methods": "*"
+    })
     return response
 
 
@@ -80,7 +93,7 @@ async def forward_request(
     target_url: str, headers: Dict[str, str], data: Dict
 ) -> Response:
     try:
-        # 删除原有的 Host 头
+        # 删除原有的 Host 和 Authorization 头
         headers.pop("host", None)
         headers.pop("authorization", None)
         # 添加新的 Host 头
@@ -158,12 +171,14 @@ async def proxy(request):
         data = await request.json()
         model_name = data.get("model", "")
 
-        random_key = random.choice(API_KEYS) if "gpt" in model_name else ""
-        random_url = (
-            random.choice(API_URLS)
-            if "gpt" in model_name
-            else random.choice(CLAUDE_API_URLS)
-        )
+        if "gpt" in model_name:
+            random_key = random.choice(API_KEYS)
+            random_url = random.choice(API_URLS)
+        elif "claude" in model_name:
+            random_key = ""
+            random_url = random.choice(CLAUDE_API_URLS)
+        else:
+            return add_cors_headers(Response("Unsupported model", status_code=400))
 
         headers = dict(request.headers)
         if "gpt" in model_name:
@@ -187,6 +202,9 @@ async def proxy(request):
             await notify_error(message)
 
         return add_cors_headers(response)
+    except json.JSONDecodeError:
+        logging.error("无效的JSON格式")
+        return add_cors_headers(Response("Bad Request: Invalid JSON", status_code=400))
     except Exception as e:
         logging.error(f"处理请求时发生错误: {str(e)}")
         return add_cors_headers(Response("Internal Server Error", status_code=500))
